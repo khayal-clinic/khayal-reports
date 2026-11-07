@@ -36,10 +36,10 @@
     </div>
 
     <script>
-        // ✅ دالة فك التشفير (AES-256) - متوافقة مع التطبيق
         async function decryptReport() {
             const password = document.getElementById('password').value;
-            const encryptedData = new URLSearchParams(window.location.search).get('data');
+            const urlParams = new URLSearchParams(window.location.search);
+            let encryptedData = urlParams.get('data');
             
             if (!encryptedData) {
                 showError('لا توجد بيانات في الرابط.');
@@ -47,15 +47,21 @@
             }
 
             try {
-                // فك تشفير Base64
-                const combined = Uint8Array.from(atob(encryptedData), c => c.charCodeAt(0));
+                // 1. إصلاح Base64 ليكون متوافقاً مع الرابط (URL-Safe)
+                let base64 = encryptedData.replace(/-/g, '+').replace(/_/g, '/');
+                while (base64.length % 4) {
+                    base64 += '=';
+                }
+
+                // 2. فك تشفير Base64
+                const combined = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
                 
-                // استخراج Salt و IV
+                // 3. استخراج Salt و IV
                 const salt = combined.slice(0, 16);
                 const iv = combined.slice(16, 32);
                 const ciphertext = combined.slice(32);
 
-                // اشتقاق المفتاح
+                // 4. اشتقاق المفتاح (PBKDF2)
                 const enc = new TextEncoder();
                 const keyMaterial = await window.crypto.subtle.importKey(
                     "raw",
@@ -78,7 +84,7 @@
                     ["decrypt"]
                 );
 
-                // فك التشفير
+                // 5. فك التشفير
                 const decrypted = await window.crypto.subtle.decrypt(
                     { name: "AES-CBC", iv: iv },
                     key,
@@ -93,6 +99,7 @@
                 document.getElementById('report-data').textContent = reportText;
 
             } catch (e) {
+                console.error(e);
                 showError('❌ كلمة المرور خاطئة أو البيانات تالفة.');
             }
         }
