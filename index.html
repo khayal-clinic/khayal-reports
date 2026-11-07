@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="en" dir="ltr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -15,7 +15,7 @@
             border-radius: 10px;
             padding: 20px;
             margin-top: 20px;
-            text-align: right;
+            text-align: left; /* ✅ محاذاة لليسار (لغة إنجليزية) */
             box-shadow: 0 4px 10px rgba(0,0,0,0.05);
             position: relative;
         }
@@ -39,6 +39,8 @@
             line-height: 1.6;
             position: relative;
             z-index: 1;
+            direction: ltr; /* ✅ اتجاه النص من اليسار لليمين */
+            text-align: left;
         }
         
         .input-group { margin: 20px 0; }
@@ -52,20 +54,22 @@
 <body>
     <div class="container">
         <h2>🔒 KHAYAL CLINIC</h2>
+        <p>This prescription is protected. Enter password.</p>
 
         <div id="password-section" class="input-group">
-            <input type="password" id="password" placeholder="أدخل كلمة المرور...">
-            <button onclick="decryptReport()">عرض الوصفة</button>
+            <input type="password" id="password" placeholder="Enter password...">
+            <button onclick="decryptReport()">View Prescription</button>
             <p id="error" class="error hidden"></p>
         </div>
 
         <div id="report-section" class="hidden">
+            <h3 style="color: #059669;">✅ Decrypted Successfully</h3>
             
             <div class="prescription-card">
                 <div id="report-data" class="prescription-text"></div>
             </div>
             
-            <button onclick="window.print()" style="background-color: #8a6d3b; margin-top: 15px;">🖨️ طباعة الوصفة</button>
+            <button onclick="window.print()" style="background-color: #8a6d3b; margin-top: 15px;">🖨️ Print Prescription</button>
         </div>
     </div>
 
@@ -76,12 +80,11 @@
             let encryptedData = urlParams.get('data');
             
             if (!encryptedData) {
-                showError('لا توجد بيانات في الرابط.');
+                showError('No data found in URL.');
                 return;
             }
 
             try {
-                // ✅ إصلاح Base64 (تحويله من URL-Safe إلى Standard)
                 let base64 = encryptedData.replace(/-/g, '+').replace(/_/g, '/');
                 while (base64.length % 4) { base64 += '='; }
 
@@ -107,13 +110,16 @@
                 const decoder = new TextDecoder();
                 const reportText = decoder.decode(decrypted);
 
+                // ✅ حذف كلمة "الختم" أو "Stamp" من النص قبل العرض
+                let cleanedText = reportText.replace(/الختم/g, "").replace(/Stamp/gi, "").trim();
+
                 document.getElementById('password-section').classList.add('hidden');
                 document.getElementById('report-section').classList.remove('hidden');
-                document.getElementById('report-data').textContent = reportText;
+                document.getElementById('report-data').textContent = cleanedText;
 
             } catch (e) {
                 console.error(e);
-                showError('❌ كلمة المرور خاطئة أو البيانات تالفة.');
+                showError('❌ Incorrect password or corrupted data.');
             }
         }
 
