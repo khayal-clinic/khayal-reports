@@ -5,16 +5,66 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>KHAYAL CLINIC - Prescription</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f4f8; margin: 0; padding: 20px; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
-        .container { background-color: #ffffff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); max-width: 500px; width: 100%; text-align: center; }
-        h2 { color: #1a4a5a; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background-color: #f0f4f8; 
+            margin: 0; 
+            padding: 20px; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            min-height: 100vh; 
+        }
+        .container { 
+            background-color: #ffffff; 
+            padding: 30px; 
+            border-radius: 12px; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1); 
+            max-width: 500px; 
+            width: 100%; 
+            text-align: center; 
+        }
+        h2 { color: #1a4a5a; margin-bottom: 10px; }
+        
+        /* تنسيق البطاقة الطبية */
+        .prescription-card {
+            background-color: #ffffff;
+            border: 2px solid #0f6b7a;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+            text-align: right;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+            position: relative;
+        }
+        .prescription-card::before {
+            content: "KHAYAL CLINIC";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-30deg);
+            font-size: 40px;
+            color: rgba(15, 107, 122, 0.05);
+            font-weight: bold;
+            z-index: 0;
+            pointer-events: none;
+        }
+        .prescription-text {
+            font-family: 'Courier New', Courier, monospace;
+            white-space: pre-wrap;
+            color: #1a4a5a;
+            font-size: 14px;
+            line-height: 1.6;
+            position: relative;
+            z-index: 1;
+        }
+        
         .input-group { margin: 20px 0; }
         input[type="password"] { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; font-size: 16px; text-align: center; }
-        button { background-color: #0f6b7a; color: white; padding: 12px 20px; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; width: 100%; }
+        button { background-color: #0f6b7a; color: white; padding: 12px 20px; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; width: 100%; margin-top: 10px; }
         button:hover { background-color: #0d5a66; }
         .hidden { display: none; }
         .error { color: red; margin-top: 10px; }
-        .report-data { text-align: right; white-space: pre-wrap; background-color: #f9fbfc; padding: 15px; border-radius: 8px; border: 1px solid #e1e8ed; margin-top: 20px; font-family: 'Courier New', Courier, monospace; }
     </style>
 </head>
 <body>
@@ -24,14 +74,19 @@
 
         <div id="password-section" class="input-group">
             <input type="password" id="password" placeholder="أدخل كلمة المرور...">
-            <br><br>
             <button onclick="decryptReport()">عرض الوصفة</button>
             <p id="error" class="error hidden"></p>
         </div>
 
         <div id="report-section" class="hidden">
-            <h3>✅ تم فك التشفير بنجاح</h3>
-            <div id="report-data" class="report-data"></div>
+            <h3 style="color: #059669;">✅ تم فك التشفير بنجاح</h3>
+            
+            <!-- ✅ البطاقة الطبية -->
+            <div class="prescription-card">
+                <div id="report-data" class="prescription-text"></div>
+            </div>
+            
+            <button onclick="window.print()" style="background-color: #8a6d3b; margin-top: 15px;">🖨️ طباعة الوصفة</button>
         </div>
     </div>
 
@@ -47,48 +102,26 @@
             }
 
             try {
-                // 1. إصلاح Base64 ليكون متوافقاً مع الرابط (URL-Safe)
                 let base64 = encryptedData.replace(/-/g, '+').replace(/_/g, '/');
-                while (base64.length % 4) {
-                    base64 += '=';
-                }
+                while (base64.length % 4) { base64 += '='; }
 
-                // 2. فك تشفير Base64
                 const combined = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
-                
-                // 3. استخراج Salt و IV
                 const salt = combined.slice(0, 16);
                 const iv = combined.slice(16, 32);
                 const ciphertext = combined.slice(32);
 
-                // 4. اشتقاق المفتاح (PBKDF2)
                 const enc = new TextEncoder();
                 const keyMaterial = await window.crypto.subtle.importKey(
-                    "raw",
-                    enc.encode(password),
-                    { name: "PBKDF2" },
-                    false,
-                    ["deriveBits", "deriveKey"]
+                    "raw", enc.encode(password), { name: "PBKDF2" }, false, ["deriveBits", "deriveKey"]
                 );
 
                 const key = await window.crypto.subtle.deriveKey(
-                    {
-                        name: "PBKDF2",
-                        salt: salt,
-                        iterations: 10000,
-                        hash: "SHA-256"
-                    },
-                    keyMaterial,
-                    { name: "AES-CBC", length: 256 },
-                    false,
-                    ["decrypt"]
+                    { name: "PBKDF2", salt: salt, iterations: 10000, hash: "SHA-256" },
+                    keyMaterial, { name: "AES-CBC", length: 256 }, false, ["decrypt"]
                 );
 
-                // 5. فك التشفير
                 const decrypted = await window.crypto.subtle.decrypt(
-                    { name: "AES-CBC", iv: iv },
-                    key,
-                    ciphertext
+                    { name: "AES-CBC", iv: iv }, key, ciphertext
                 );
 
                 const decoder = new TextDecoder();
